@@ -42,7 +42,7 @@ namespace MicroWS
         ssize_t WriteFd(int fd, int *Errno);
 
     private:
-        char *BeginPtr_;
+        char *BeginPtr_();
         const char *BeginPtr_() const;
         void MakeSpace_(size_t len);
         std::vector<char> buffer_;

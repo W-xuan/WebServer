@@ -25,7 +25,7 @@ namespace MicroWS
         void flush();
 
         int GetLevel();
-        void SetLevel();
+        void SetLevel(int level);
         bool IsOpen() { return isOpen_; }
 
     private:
@@ -36,7 +36,7 @@ namespace MicroWS
 
     private:
         static const int LOG_PATH_LEN = 256;
-        static const int LOT_NAME_LEN = 256;
+        static const int LOG_NAME_LEN = 256;
         static const int MAX_LINES = 50000;
 
         const char *path_;
