@@ -22,7 +22,7 @@ namespace MicroWS
         void UnmapFile();
         char *File();
         size_t FileLen() const;
-        void ErrorContent(Buferr &buff, std::string message);
+        void ErrorContent(Buffer &buff, std::string message);
         int Code() const { return code_; }
 
     private:
