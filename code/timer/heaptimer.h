@@ -1,67 +1,61 @@
 #ifndef HEAP_TIMER_H
 #define HEAP_TIMER_H
 
-#include <queue>
-#include <unordered_map>
-#include <time.h>
+#include "../log/log.h"
 #include <algorithm>
 #include <arpa/inet.h>
-#include <functional>
 #include <assert.h>
 #include <chrono>
-#include "../log/log.h"
-namespace MicroWS
-{
-    typedef std::function<void()> TimeoutCallBack;
-    typedef std::chrono::high_resolution_clock Clock;
-    typedef std::chrono::milliseconds MS;
-    typedef Clock::time_point TimeStamp;
+#include <functional>
+#include <queue>
+#include <time.h>
+#include <unordered_map>
+namespace MicroWS {
+typedef std::function<void()> TimeoutCallBack;
+typedef std::chrono::high_resolution_clock Clock;
+typedef std::chrono::milliseconds MS;
+typedef Clock::time_point TimeStamp;
 
-    struct TimerNode
-    {
-        int id;
-        TimeStamp expires;
-        TimeoutCallBack cb;
-        bool operator<(const TimerNode &t)
-        {
-            return expires < t.expires;
-        }
-    };
+struct TimerNode {
+  int id;
+  TimeStamp expires;
+  TimeoutCallBack cb;
+  bool operator<(const TimerNode &t) { return expires < t.expires; }
+};
 
-    class HeapTimer
-    {
-    public:
-        HeapTimer() { heap_.reserve(64); }
+class HeapTimer {
+public:
+  HeapTimer() { heap_.reserve(64); }
 
-        ~HeapTimer() { clear(); }
+  ~HeapTimer() { clear(); }
 
-        void adjust(int id, int newExpries);
+  void adjust(int id, int newExpries);
 
-        void add(int id, int timeOut, const TimeoutCallBack &cb);
+  void add(int id, int timeOut, const TimeoutCallBack &cb);
 
-        void doWork(int id);
+  void doWork(int id);
 
-        void clear();
+  void clear();
 
-        void tick();
+  void tick();
 
-        void pop();
+  void pop();
 
-        int GetNextTick();
+  int GetNextTick();
 
-    private:
-        void del_(size_t i);
+private:
+  void del_(size_t i);
 
-        void siftup_(size_t i);
+  void siftup_(size_t i);
 
-        bool siftdown_(size_t index, size_t n);
+  bool siftdown_(size_t index, size_t n);
 
-        void SwapNode_(size_t i, size_t j);
+  void SwapNode_(size_t i, size_t j);
 
-        std::vector<TimerNode> heap_;
+  std::vector<TimerNode> heap_;
 
-        std::unordered_map<int, size_t> ref_;
-    };
-}
+  std::unordered_map<int, size_t> ref_;
+};
+} // namespace MicroWS
 
 #endif
