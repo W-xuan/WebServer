@@ -1,4 +1,5 @@
 #include "httprequest.h"
+#include <mysql/mysql.h>
 #include <regex>
 namespace MicroWS {
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
@@ -173,6 +174,98 @@ void HttpRequest::ParseFromUrlencoded_() {
     value = body_.substr(j, i - j);
     post_[key] = value;
   }
+}
+
+bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd,
+                             bool isLogin) {
+  if (name == "" || pwd == "") {
+    return false;
+  }
+  LOG_INFO("Verify name:%s pwd:%s", name.c_str(), pwd.c_str());
+  MYSQL *sql;
+  SqlConnRAII(&sql, SqlConnPool::Instance());
+  assert(sql);
+
+  bool flag = false;
+  unsigned int j = 0;
+  char order[256] = {0};
+
+  MYSQL_FIELD *fields = nullptr;
+  MYSQL_RES *res = nullptr;
+
+  if (!isLogin) {
+    flag = true;
+  }
+  snprintf(order, 256,
+           "SELECT username, password FROM user WHERE username='%s' LIMIT 1",
+           name.c_str());
+  LOG_DEBUG("%s", order);
+
+  if (mysql_query(sql, order)) {
+    mysql_free_result(res);
+    return false;
+  }
+  res = mysql_store_result(sql);
+  j = mysql_num_fields(res);
+  fields = mysql_fetch_fields(res);
+
+  while (MYSQL_ROW row = mysql_fetch_row(res)) {
+    LOG_DEBUG("MYSQL ROW: %s %s", row[0], row[1]);
+    std::string password(row[1]);
+    if (isLogin) {
+      if (pwd == password) {
+        flag = true;
+      } else {
+        flag = false;
+        LOG_DEBUG("pwd error!");
+      }
+    } else {
+      flag = false;
+      LOG_DEBUG("user used!");
+    }
+  }
+  mysql_free_result(res);
+
+  if (!isLogin && flag == true) {
+    LOG_DEBUG("regirster!");
+    bzero(order, 256);
+    snprintf(order, 256,
+             "INSERT INTO user(username, password) VALUES('%s', '%s')",
+             name.c_str(), pwd.c_str());
+    LOG_DEBUG("%s", order);
+    if (mysql_query(sql, order)) {
+      LOG_DEBUG("Insert error!");
+      flag = false;
+    }
+    flag = true;
+  }
+  SqlConnPool::Instance()->FreeConn(sql);
+  LOG_DEBUG("UserVerify success!!");
+  return flag;
+}
+
+std::string HttpRequest::path() const { return path_; }
+
+std::string &HttpRequest::path() { return path_; }
+
+std::string HttpRequest::method() const { return method_; }
+
+std::string HttpRequest::version() const { return version_; }
+
+std::string HttpRequest::GetPost(const std::string &key) const {
+  assert(key != "");
+  if (post_.count(key) == 1) {
+    return post_.find(key)->second;
+  }
+  return "";
+}
+
+std::string HttpRequest::GetPost(const char *key) const {
+  assert(key != nullptr);
+  if (post_.count(key) == 1) {
+    return post_.find(key)->second;
+  }
+  return "";
 }
 
 } // namespace MicroWS

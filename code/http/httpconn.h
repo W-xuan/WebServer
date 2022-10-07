@@ -23,7 +23,7 @@ public:
   ssize_t write(int *saveErrno);
   void Close();
   int GetFd() const;
-  int FetPort() const;
+  int GetPort() const;
   const char *GetIP() const;
   sockaddr_in GetAddr() const;
   bool process();
@@ -40,7 +40,7 @@ private:
   int iovCnt_;
   struct iovec iov_[2];
   Buffer readBuff_;
-  Buffer writeBUff_;
+  Buffer writeBuff_;
   HttpRequest request_;
   HttpResponse response_;
 };
