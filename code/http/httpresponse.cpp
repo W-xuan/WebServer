@@ -111,14 +111,15 @@ void HttpResponse::AddHeader_(Buffer &buff) {
 void HttpResponse::AddContent_(Buffer &buff) {
   int srcFd = open((srcDir_ + path_).data(), O_RDONLY);
   if (srcFd < 0) {
-    ErrorContent(buff, "File NotFound");
+    ErrorContent(buff, "File NotFound!");
     return;
   }
+
   LOG_DEBUG("file path %s", (srcDir_ + path_).data());
   int *mmRet =
       (int *)mmap(0, mmFileStat_.st_size, PROT_READ, MAP_PRIVATE, srcFd, 0);
   if (*mmRet == -1) {
-    ErrorContent(buff, "File NotFound");
+    ErrorContent(buff, "File NotFound!");
     return;
   }
   mmFile_ = (char *)mmRet;

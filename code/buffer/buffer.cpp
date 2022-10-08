@@ -1,11 +1,10 @@
 #include "buffer.h"
 
 namespace MicroWS {
-Buffer::Buffer(int initBufferSize)
-    : buffer_(initBufferSize), readPos_(0), writePos_(0) {}
+Buffer::Buffer(int initBuffSize)
+    : buffer_(initBuffSize), readPos_(0), writePos_(0) {}
 
 size_t Buffer::ReadableBytes() const { return writePos_ - readPos_; }
-
 size_t Buffer::WritableBytes() const { return buffer_.size() - writePos_; }
 
 size_t Buffer::PrependableBytes() const { return readPos_; }
@@ -28,7 +27,7 @@ void Buffer::RetrieveAll() {
   writePos_ = 0;
 }
 
-std::string Buffer::RetriveAllToStr() {
+std::string Buffer::RetrieveAllToStr() {
   std::string str(Peek(), ReadableBytes());
   RetrieveAll();
   return str;
@@ -56,6 +55,10 @@ void Buffer::Append(const char *str, size_t len) {
   HasWritten(len);
 }
 
+void Buffer::Append(const Buffer &buff) {
+  Append(buff.Peek(), buff.ReadableBytes());
+}
+
 void Buffer::EnsureWriteable(size_t len) {
   if (WritableBytes() < len) {
     MakeSpace_(len);
@@ -66,28 +69,30 @@ void Buffer::EnsureWriteable(size_t len) {
 ssize_t Buffer::ReadFd(int fd, int *saveErrno) {
   char buff[65535];
   struct iovec iov[2];
-  const size_t writale = WritableBytes();
+  const size_t writable = WritableBytes();
   iov[0].iov_base = BeginPtr_() + writePos_;
-  iov[0].iov_len = writale;
+  iov[0].iov_len = writable;
   iov[1].iov_base = buff;
   iov[1].iov_len = sizeof(buff);
+
   const ssize_t len = readv(fd, iov, 2);
   if (len < 0) {
     *saveErrno = errno;
-  } else if (static_cast<size_t>(len) <= writale) {
+  } else if (static_cast<size_t>(len) <= writable) {
     writePos_ += len;
   } else {
     writePos_ = buffer_.size();
-    Append(buff, len - writale);
+    Append(buff, len - writable);
   }
   return len;
 }
 
 ssize_t Buffer::WriteFd(int fd, int *saveErrno) {
-  size_t readsize = ReadableBytes();
-  ssize_t len = write(fd, Peek(), readsize);
+  size_t readSize = ReadableBytes();
+  ssize_t len = write(fd, Peek(), readSize);
   if (len < 0) {
     *saveErrno = errno;
+    return len;
   }
   readPos_ += len;
   return len;

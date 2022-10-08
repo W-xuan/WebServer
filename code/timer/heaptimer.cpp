@@ -67,7 +67,7 @@ void HeapTimer::doWork(int id) {
 }
 
 void HeapTimer::del_(size_t index) {
-  assert(!heap_.size() && index >= 0 && index < heap_.size());
+  assert(!heap_.empty() && index >= 0 && index < heap_.size());
   size_t i = index;
   size_t n = heap_.size() - 1;
   assert(i <= n);

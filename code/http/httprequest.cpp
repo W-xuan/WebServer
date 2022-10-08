@@ -1,6 +1,4 @@
 #include "httprequest.h"
-#include <mysql/mysql.h>
-#include <regex>
 namespace MicroWS {
 const std::unordered_set<std::string> HttpRequest::DEFAULT_HTML{
     "/index", "/register", "/login", "/welcome", "/video", "/picture",
@@ -28,7 +26,7 @@ bool HttpRequest::IsKeepAlive() const {
 
 bool HttpRequest::parse(Buffer &buff) {
   const char CRLF[] = "\r\n";
-  if (buff.ReadableBytes() < 0) {
+  if (buff.ReadableBytes() <= 0) {
     return false;
   }
   while (buff.ReadableBytes() && state_ != FINISH) {
@@ -66,7 +64,7 @@ bool HttpRequest::parse(Buffer &buff) {
 
 void HttpRequest::ParsePath_() {
   if (path_ == "/") {
-    path_ = ".index.html";
+    path_ = "/index.html";
   } else {
     for (auto &item : DEFAULT_HTML) {
       if (item == path_) {
@@ -139,10 +137,12 @@ void HttpRequest::ParseFromUrlencoded_() {
   if (body_.size() == 0) {
     return;
   }
+
   std::string key, value;
   int num = 0;
   int n = body_.size();
   int i = 0, j = 0;
+
   for (; i < n; i++) {
     char ch = body_[i];
     switch (ch) {
@@ -189,7 +189,6 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd,
   bool flag = false;
   unsigned int j = 0;
   char order[256] = {0};
-
   MYSQL_FIELD *fields = nullptr;
   MYSQL_RES *res = nullptr;
 
@@ -230,7 +229,7 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd,
     LOG_DEBUG("regirster!");
     bzero(order, 256);
     snprintf(order, 256,
-             "INSERT INTO user(username, password) VALUES('%s', '%s')",
+             "INSERT INTO user(username, password) VALUES('%s','%s')",
              name.c_str(), pwd.c_str());
     LOG_DEBUG("%s", order);
     if (mysql_query(sql, order)) {
@@ -247,7 +246,6 @@ bool HttpRequest::UserVerify(const std::string &name, const std::string &pwd,
 std::string HttpRequest::path() const { return path_; }
 
 std::string &HttpRequest::path() { return path_; }
-
 std::string HttpRequest::method() const { return method_; }
 
 std::string HttpRequest::version() const { return version_; }

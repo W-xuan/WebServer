@@ -10,27 +10,46 @@ namespace MicroWS {
 template <class T> class BlockDeque {
 public:
   explicit BlockDeque(size_t MaxCapacity = 1000);
+
   ~BlockDeque();
+
   void clear();
+
   bool empty();
+
   bool full();
+
   void Close();
+
   size_t size();
+
   size_t capacity();
+
   T front();
+
   T back();
+
   void push_back(const T &item);
+
   void push_front(const T &item);
+
   bool pop(T &item);
+
   bool pop(T &item, int timeout);
+
   void flush();
 
 private:
   std::deque<T> deq_;
+
   size_t capacity_;
+
   std::mutex mtx_;
+
   bool isClose_;
+
   std::condition_variable condConsumer_;
+
   std::condition_variable condProducer_;
 };
 
@@ -40,7 +59,7 @@ BlockDeque<T>::BlockDeque(size_t MaxCapacity) : capacity_(MaxCapacity) {
   isClose_ = false;
 }
 
-template <class T> BlockDeque<T>::~BlockDeque() { Close(); }
+template <class T> BlockDeque<T>::~BlockDeque() { Close(); };
 
 template <class T> void BlockDeque<T>::Close() {
   {
@@ -50,9 +69,9 @@ template <class T> void BlockDeque<T>::Close() {
   }
   condProducer_.notify_all();
   condConsumer_.notify_all();
-}
+};
 
-template <class T> void BlockDeque<T>::flush() { condConsumer_.notify_one(); }
+template <class T> void BlockDeque<T>::flush() { condConsumer_.notify_one(); };
 
 template <class T> void BlockDeque<T>::clear() {
   std::lock_guard<std::mutex> locker(mtx_);
@@ -90,7 +109,7 @@ template <class T> void BlockDeque<T>::push_back(const T &item) {
 
 template <class T> void BlockDeque<T>::push_front(const T &item) {
   std::unique_lock<std::mutex> locker(mtx_);
-  while (deq_.size() > capacity_) {
+  while (deq_.size() >= capacity_) {
     condProducer_.wait(locker);
   }
   deq_.push_front(item);

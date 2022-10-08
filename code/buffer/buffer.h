@@ -26,7 +26,7 @@ public:
   void RetrieveUntil(const char *end);
 
   void RetrieveAll();
-  std::string RetriveAllToStr();
+  std::string RetrieveAllToStr();
 
   const char *BeginWriteConst() const;
   char *BeginWrite();

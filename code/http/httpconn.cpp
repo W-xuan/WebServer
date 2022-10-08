@@ -1,9 +1,4 @@
 #include "httpconn.h"
-#include <cstdint>
-#include <mysql/mysql/client_plugin.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/uio.h>
 
 namespace MicroWS {
 const char *HttpConn::srcDir;
@@ -11,7 +6,7 @@ std::atomic<int> HttpConn::userCount;
 bool HttpConn::isET;
 
 HttpConn::HttpConn() {
-  fd_ = 1;
+  fd_ = -1;
   addr_ = {0};
   isClose_ = true;
 }
@@ -73,7 +68,7 @@ ssize_t HttpConn::write(int *saveErrno) {
     if (iov_[0].iov_len + iov_[1].iov_len == 0) {
       break;
     } else if (static_cast<size_t>(len) > iov_[0].iov_len) {
-      iov_[1].iov_base = (u_int8_t *)iov_[1].iov_base + (len - iov_[0].iov_len);
+      iov_[1].iov_base = (uint8_t *)iov_[1].iov_base + (len - iov_[0].iov_len);
       iov_[1].iov_len -= (len - iov_[0].iov_len);
       if (iov_[0].iov_len) {
         writeBuff_.RetrieveAll();
@@ -82,8 +77,7 @@ ssize_t HttpConn::write(int *saveErrno) {
     } else {
       iov_[0].iov_base = (uint8_t *)iov_[0].iov_base + len;
       iov_[0].iov_len -= len;
-      writeBuff_.RetrieveAll();
-      iov_[0].iov_len = 0;
+      writeBuff_.Retrieve(len);
     }
   } while (isET || ToWriteBytes() > 10240);
   return len;
@@ -96,7 +90,6 @@ bool HttpConn::process() {
   } else if (request_.parse(readBuff_)) {
     LOG_DEBUG("%s", request_.path().c_str());
     response_.Init(srcDir, request_.path(), request_.IsKeepAlive(), 200);
-
   } else {
     response_.Init(srcDir, request_.path(), false, 400);
   }
@@ -111,7 +104,7 @@ bool HttpConn::process() {
     iov_[1].iov_len = response_.FileLen();
     iovCnt_ = 2;
   }
-  LOG_DEBUG("filesize:%d, %d to %d", response_.FileLen(), iovCnt_,
+  LOG_DEBUG("filesize:%d, %d  to %d", response_.FileLen(), iovCnt_,
             ToWriteBytes());
   return true;
 }

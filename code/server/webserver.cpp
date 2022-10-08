@@ -24,19 +24,20 @@ WebServer::WebServer(int port, int trigMode, int timeoutMS, bool OptLinger,
   if (!InitSocket_()) {
     isClose_ = true;
   }
+
   if (openLog) {
     Log::Instance()->init(logLevel, "./log", ".log", logQueSize);
     if (isClose_) {
-      LOG_ERROR("======== Server init error! ========");
+      LOG_ERROR("========== Server init error!==========");
     } else {
-      LOG_INFO("======== Server Init ========");
+      LOG_INFO("========== Server init ==========");
       LOG_INFO("Port:%d, OpenLinger: %s", port_, OptLinger ? "true" : "false");
       LOG_INFO("Listen Mode: %s, OpenConn Mode: %s",
                (listenEvent_ & EPOLLET ? "ET" : "LT"),
                (connEvent_ & EPOLLET ? "ET" : "LT"));
       LOG_INFO("LogSys level: %d", logLevel);
       LOG_INFO("srcDir: %s", HttpConn::srcDir);
-      LOG_INFO("SqlConnPool num: %d, threadPool num:%d", connPoolNum,
+      LOG_INFO("SqlConnPool num: %d, ThreadPool num: %d", connPoolNum,
                threadNum);
     }
   }
@@ -56,8 +57,10 @@ void WebServer::InitEventMode_(int trigMode) {
   case 0:
     break;
   case 1:
+    connEvent_ |= EPOLLET;
     break;
   case 2:
+    listenEvent_ |= EPOLLET;
     break;
   case 3:
     listenEvent_ |= EPOLLET;
@@ -74,16 +77,13 @@ void WebServer::InitEventMode_(int trigMode) {
 void WebServer::Start() {
   int timeMS = -1;
   if (!isClose_) {
-    LOG_INFO("======== Server start ========");
+    LOG_INFO("========== Server start ==========");
   }
   while (!isClose_) {
     if (timeoutMS_ > 0) {
       timeMS = timer_->GetNextTick();
     }
     int eventCnt = epoller_->Wait(timeMS);
-    for (int i = 0; i < eventCnt; i++) {
-      int fd = epoller_->Wait(timeMS);
-    }
     for (int i = 0; i < eventCnt; i++) {
       int fd = epoller_->GetEventFd(i);
       uint32_t events = epoller_->GetEvents(i);
@@ -142,7 +142,7 @@ void WebServer::DealListen_() {
       return;
     } else if (HttpConn::userCount >= MAX_FD) {
       SendError_(fd, "Server busy!");
-      LOG_ERROR("Client is full!");
+      LOG_WARN("Clients is full!");
       return;
     }
     AddClient_(fd, addr);
@@ -158,7 +158,7 @@ void WebServer::DealRead_(HttpConn *client) {
 void WebServer::DealWrite_(HttpConn *client) {
   assert(client);
   ExtentTime_(client);
-  threadpool_->AddTask(std::bind(&WebServer::OnRead_, this, client));
+  threadpool_->AddTask(std::bind(&WebServer::OnWrite_, this, client));
 }
 
 void WebServer::ExtentTime_(HttpConn *client) {
@@ -177,6 +177,7 @@ void WebServer::OnRead_(HttpConn *client) {
     CloseConn_(client);
     return;
   }
+  OnProcess(client);
 }
 
 void WebServer::OnProcess(HttpConn *client) {
@@ -221,6 +222,7 @@ bool WebServer::InitSocket_() {
     optLinger.l_onoff = 1;
     optLinger.l_linger = 1;
   }
+
   listenFd_ = socket(AF_INET, SOCK_STREAM, 0);
   if (listenFd_ < 0) {
     LOG_ERROR("Create socket error!", port_);
@@ -231,17 +233,19 @@ bool WebServer::InitSocket_() {
                    sizeof(optLinger));
   if (ret < 0) {
     close(listenFd_);
-    LOG_ERROR("Init linger error!");
+    LOG_ERROR("Init linger error!", port_);
     return false;
   }
+
   int optval = 1;
   ret = setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, (const void *)&optval,
                    sizeof(int));
   if (ret == -1) {
-    LOG_ERROR("set socket setsocopt error!");
+    LOG_ERROR("set socket setsockopt error !");
     close(listenFd_);
     return false;
   }
+
   ret = bind(listenFd_, (struct sockaddr *)&addr, sizeof(addr));
   if (ret < 0) {
     LOG_ERROR("Bind Port:%d error!", port_);
@@ -255,7 +259,6 @@ bool WebServer::InitSocket_() {
     close(listenFd_);
     return false;
   }
-
   ret = epoller_->AddFd(listenFd_, listenEvent_ | EPOLLIN);
   if (ret == 0) {
     LOG_ERROR("Add listen error!");
